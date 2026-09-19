@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stackademic</title>
+<style>
+  :root {
+    --bg: #12141c;
+    --panel: #1b1e29;
+    --accent: #ffb703;
+    --correct: #2ecc71;
+    --wrong: #e74c3c;
+    --text: #f2f2f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 { margin-bottom: 4px; }
+  .subtitle { color: #999; margin-top: 0; margin-bottom: 20px; }
+
+  #connectBar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  button {
+    background: var(--accent);
+    color: #111;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status { font-size: 14px; color: #aaa; }
+
+  .layout {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  #quizPanel {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 24px;
+    width: 420px;
+  }
+  #prompt { font-size: 20px; margin-bottom: 16px; min-height: 60px; }
+  .option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #2a2e3d;
+    color: var(--text);
+    border: 2px solid transparent;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .option:hover:not(:disabled) { border-color: var(--accent); }
+  .option.correct { background: var(--correct); color: #052; }
+  .option.wrong { background: var(--wrong); color: #300; }
+
+  #scoreLine { margin-top: 16px; color: #aaa; font-size: 14px; }
+
+  #towerPanel {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 24px;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #tower {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 4px;
+    min-height: 340px;
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .block {
+    width: 120px;
+    height: 28px;
+    background: linear-gradient(180deg, #8ecae6, #219ebc);
+    border-radius: 4px;
+    animation: drop 0.35s ease-out;
+  }
+  @keyframes drop {
+    from { transform: translateY(-40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .plate {
+    width: 160px;
+    height: 14px;
+    background: #444;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+  .plate.shaking { animation: shake 0.15s infinite; background: var(--wrong); }
+  @keyframes shake {
+    0% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    100% { transform: translateX(-6px); }
+  }
+  #towerLabel { margin-top: 12px; font-size: 14px; color: #aaa; }
+
+  #gameOver {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>Stackademic</h1>
+<p class="subtitle">Answer right, place a block. Answer wrong, the plate shakes.</p>
+
+<div id="connectBar">
+  <button id="connectBtn">Connect to Shake Plate</button>
+  <span id="status">Not connected</span>
+</div>
+
+<div class="layout">
+  <div id="quizPanel">
+    <div id="prompt">Loading question...</div>
+    <div id="options"></div>
+    <div id="scoreLine">Question 1 of N &middot; Tower height: 0</div>
+  </div>
+
+  <div id="towerPanel">
+    <div id="tower"></div>
+    <div class="plate" id="plate"></div>
+    <div id="towerLabel">Shake plate</div>
+  </div>
+</div>
+
+<div id="gameOver">
+  <h2 id="gameOverText"></h2>
+  <button id="restartBtn">Play Again</button>
+</div>
+
+<script src="questions.js"></script>
+<script src="serial.js"></script>
+<script>
+  const link = new ArduinoLink();
+  const connectBtn = document.getElementById("connectBtn");
+  const statusEl = document.getElementById("status");
+  const promptEl = document.getElementById("prompt");
+  const optionsEl = document.getElementById("options");
+  const scoreLineEl = document.getElementById("scoreLine");
+  const towerEl = document.getElementById("tower");
+  const plateEl = document.getElementById("plate");
+  const gameOverEl = document.getElementById("gameOver");
+  const gameOverTextEl = document.getElementById("gameOverText");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let currentIndex = 0;
+  let towerHeight = 0;
+  let hardwareConnected = false;
+
+  link.onStatus = (line) => {
+    console.log("Board says:", line);
+  };
+
+  connectBtn.addEventListener("click", async () => {
+    try {
+      connectBtn.disabled = true;
+      statusEl.textContent = "Connecting...";
+      await link.connect();
+      hardwareConnected = true;
+      statusEl.textContent = "Connected";
+      connectBtn.textContent = "Connected";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Connection failed: " + err.message;
+      connectBtn.disabled = false;
+    }
+  });
+
+  function loadQuestion() {
+    if (currentIndex >= QUESTIONS.length) {
+      endGame(true);
+      return;
+    }
+    const q = QUESTIONS[currentIndex];
+    promptEl.textContent = q.prompt;
+    optionsEl.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = opt;
+      btn.addEventListener("click", () => handleAnswer(i, btn));
+      optionsEl.appendChild(btn);
+    });
+    scoreLineEl.textContent =
+      `Question ${currentIndex + 1} of ${QUESTIONS.length} · Tower height: ${towerHeight}`;
+  }
+
+  async function handleAnswer(selectedIndex, btnEl) {
+    const q = QUESTIONS[currentIndex];
+    const isCorrect = selectedIndex === q.correctIndex;
+
+    // lock out further clicks on this question
+    document.querySelectorAll(".option").forEach(b => b.disabled = true);
+    btnEl.classList.add(isCorrect ? "correct" : "wrong");
+
+    if (isCorrect) {
+      addBlock();
+      if (hardwareConnected) await link.sendCorrect();
+    } else {
+      if (hardwareConnected) {
+        plateEl.classList.add("shaking");
+        await link.sendWrong();
+        setTimeout(() => plateEl.classList.remove("shaking"), 1500);
+      } else {
+        // no hardware connected yet — still simulate visually for dev/demo
+        plateEl.classList.add("shaking");
+        setTimeout(() => plateEl.classList.remove("shaking"), 1500);
+      }
+      setTimeout(() => knockOverTower(), 400);
+      setTimeout(() => endGame(false), 1600);
+      return;
+    }
+
+    setTimeout(() => {
+      currentIndex++;
+      loadQuestion();
+    }, 900);
+  }
+
+  function addBlock() {
+    towerHeight++;
+    const block = document.createElement("div");
+    block.className = "block";
+    towerEl.appendChild(block);
+  }
+
+  function knockOverTower() {
+    towerEl.innerHTML = "";
+  }
+
+  function endGame(survived) {
+    document.querySelector(".layout").style.display = "none";
+    gameOverEl.style.display = "block";
+    gameOverTextEl.textContent = survived
+      ? `You survived! Final tower height: ${towerHeight}`
+      : `Tower collapsed. Final height: ${towerHeight}`;
+  }
+
+  restartBtn.addEventListener("click", () => {
+    currentIndex = 0;
+    towerHeight = 0;
+    towerEl.innerHTML = "";
+    document.querySelector(".layout").style.display = "flex";
+    gameOverEl.style.display = "none";
+    loadQuestion();
+  });
+
+  loadQuestion();
+</script>
+
+</body>
+</html>
