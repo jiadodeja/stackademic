@@ -41,9 +41,25 @@ function shuffle(array) {
   return result;
 }
 
-// Picks TOTAL_QUESTIONS unique random questions from the bank for a new round.
+// Shuffles ONE question's answer choices, and keeps track of which shuffled
+// position the correct answer landed on. Returns a NEW question object,
+// never changes the original in QUESTION_BANK, so this is safe to call
+// every round without messing up the source data.
+function shuffleChoices(question) {
+  const order = shuffle(question.choices.map((_, i) => i)); // e.g. [2, 0, 3, 1]
+  return {
+    ...question,
+    choices: order.map((originalIndex) => question.choices[originalIndex]),
+    correctIndex: order.indexOf(question.correctIndex),
+  };
+}
+
+// Picks TOTAL_QUESTIONS unique random questions from the bank for a new
+// round, and shuffles each question's answer order too. Without this
+// second shuffle, the correct answer would always sit wherever the
+// question bank happened to put it (in practice, always option A).
 function pickRound() {
-  return shuffle(QUESTION_BANK).slice(0, TOTAL_QUESTIONS);
+  return shuffle(QUESTION_BANK).slice(0, TOTAL_QUESTIONS).map(shuffleChoices);
 }
 
 function loadBestStreak() {
@@ -107,7 +123,7 @@ export function useGameState() {
         }
         setState(GAME_STATE.CORRECT_FEEDBACK);
       } else {
-        // Physical hardware hook - see src/hardware/hardwarePlaceholder.js
+        // Physical hardware hook - see src/hardware/shakePlate.js
         triggerTowerShake();
         setState(GAME_STATE.WRONG_FEEDBACK);
       }
