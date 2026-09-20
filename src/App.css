@@ -549,3 +549,53 @@
     opacity: 0.3;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* HARDWARE CONNECT BUTTON (Start screen)                                 */
+/* ---------------------------------------------------------------------- */
+
+.connect-hw-btn {
+  margin-top: 18px;
+  padding: 10px 24px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #cfd6ff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.connect-hw-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.connect-hw-btn:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.connect-hw-btn:disabled {
+  cursor: default;
+}
+
+.connect-hw-btn--connected {
+  color: #10121f;
+  background: linear-gradient(90deg, #6fe08a, #35b968);
+  border-color: transparent;
+}
+
+.connect-hw-btn--error {
+  color: #10121f;
+  background: linear-gradient(90deg, #ff8a8a, #e05555);
+  border-color: transparent;
+}
+
+.connect-hw-hint {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: #8a90b3;
+  max-width: 320px;
+  text-align: center;
+}

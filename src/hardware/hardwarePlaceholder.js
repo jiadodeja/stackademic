@@ -1,19 +1,31 @@
 // ============================================================================
-// HARDWARE INTEGRATION PLACEHOLDER
+// HARDWARE INTEGRATION
 // ----------------------------------------------------------------------------
-// This front-end prototype does NOT talk to the physical Arduino/servo tower.
-// It only calls this function at the moment the real tower should shake.
+// Connects the game to the real shake plate over USB (see serialLink.js for
+// the actual Web Serial connection code).
 //
-// TODO: Hardware teammate will connect this event to Arduino/USB/servo control.
-//
-// Suggested future implementation ideas (not implemented here):
-//   - Web Serial API call to send a command over USB to the Arduino
-//   - WebSocket message to a local server that controls the servo
-//   - fetch() call to a backend endpoint that triggers the shake
+// If no hardware is connected yet, triggerTowerShake() just no-ops on the
+// hardware side — the on-screen falling animation still plays either way,
+// so the game is fully playable without the physical rig attached.
 // ============================================================================
 
+import { serialLink } from "./serialLink.js";
+
+// Call this from a click handler (Web Serial requires a real user gesture —
+// it can't be triggered automatically on page load).
+export async function connectHardware() {
+  await serialLink.connect();
+}
+
+export function isHardwareConnected() {
+  return serialLink.connected;
+}
+
 export function triggerTowerShake() {
-  // eslint-disable-next-line no-console
-  console.log("TOWER SHAKE TRIGGERED");
-  // TODO: Hardware teammate will connect this event to Arduino/USB/servo control.
+  if (serialLink.connected) {
+    serialLink.sendWrong();
+  } else {
+    // eslint-disable-next-line no-console
+    console.log("TOWER SHAKE TRIGGERED (no hardware connected)");
+  }
 }

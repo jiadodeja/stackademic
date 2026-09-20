@@ -1,4 +1,29 @@
+import { useState } from "react";
+import { connectHardware, isHardwareConnected } from "../hardware/hardwarePlaceholder.js";
+
 export default function StartScreen({ bestStreak, onStart }) {
+  const [hwStatus, setHwStatus] = useState(
+    isHardwareConnected() ? "connected" : "idle"
+  );
+
+  async function handleConnect() {
+    setHwStatus("connecting");
+    try {
+      await connectHardware();
+      setHwStatus("connected");
+    } catch (err) {
+      console.error(err);
+      setHwStatus("error");
+    }
+  }
+
+  const connectLabel = {
+    idle: "Connect Shake Plate",
+    connecting: "Connecting...",
+    connected: "Shake Plate Connected",
+    error: "Connection Failed — Try Again",
+  }[hwStatus];
+
   return (
     <div className="screen start-screen">
       <h1 className="game-title">BUILD YOUR TOWER</h1>
@@ -19,6 +44,18 @@ export default function StartScreen({ bestStreak, onStart }) {
       <button className="start-btn" onClick={onStart}>
         START GAME
       </button>
+
+      <button
+        className={`connect-hw-btn connect-hw-btn--${hwStatus}`}
+        onClick={handleConnect}
+        disabled={hwStatus === "connected" || hwStatus === "connecting"}
+      >
+        {connectLabel}
+      </button>
+      <p className="connect-hw-hint">
+        Optional — the game works without it, but this hooks up the real
+        shake plate. Chrome or Edge only.
+      </p>
     </div>
   );
 }
