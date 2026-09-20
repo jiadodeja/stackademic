@@ -1,117 +1,113 @@
-# Stackademic
+# Build Your Tower
 
-Quiz bowl game: answer right, place a block on your tower. Answer wrong, a
-physical shake plate knocks it over.
+A front-end prototype for a hackathon game: answer 10 AI trivia questions in a
+row correctly while your teammate physically builds a Jenga-style tower.
+Get one wrong and the on-screen tower "falls" — the game then restarts.
 
-## Architecture (why it's built this way)
+This is **front-end only**. There is no Arduino code, no servo control, no
+backend, and no USB communication here — see "For your hardware teammate"
+below.
 
-No backend server. The quiz web app talks **directly** to the ESP32-S3-DevKitC-1
-over USB using the **Web Serial API** (Chrome/Edge only). This cuts out an
-entire layer (a Python/Node bridge process) that you don't have time for in
-17 hours.
+## How to run this on your computer (step by step)
+
+You need [Node.js](https://nodejs.org) installed (version 18 or newer is
+fine — this was built and tested on Node 22).
+
+1. Open a terminal and go into this project folder:
+   ```
+   cd build-your-tower
+   ```
+2. Install the project's dependencies (this downloads the libraries the
+   code needs, like React, into a folder called `node_modules`). You only
+   need to do this once, or again if you pull new changes:
+   ```
+   npm install
+   ```
+3. Start the local dev server:
+   ```
+   npm run dev
+   ```
+4. The terminal will print a URL, usually `http://localhost:5173/`. Open
+   that in your browser (Chrome recommended). The game will hot-reload —
+   if you edit a file and save it, the browser updates automatically
+   without needing a refresh.
+5. To stop the server, click into the terminal and press `Ctrl + C`.
+
+### Building a production version (optional, for demo day)
+
+If you want a fast, optimized static version to run on the demo laptop
+without the dev server:
+```
+npm run build
+npm run preview
+```
+`npm run build` creates a `dist/` folder with plain HTML/CSS/JS files.
+`npm run preview` serves that folder so you can double check it works.
+
+## Project structure (what each file does)
 
 ```
-[Web app in Chrome] --USB serial--> [ESP32-S3-DevKitC-1] --PWM--> [MG996R servo]
-      (quiz UX + tower)                (shake_controller.ino)      (shake plate)
+src/
+  data/questions.js          <- THE question bank. Add/edit/remove
+                                 questions here. Nothing else needs to
+                                 change when you edit this file.
+  hooks/useGameState.js      <- All game LOGIC: picking random questions,
+                                 tracking score/streak, moving between
+                                 game states, saving best streak to
+                                 localStorage. No visual code lives here.
+  hardware/hardwarePlaceholder.js
+                              <- The ONE function your hardware teammate
+                                 needs to wire up. See below.
+  components/
+    StartScreen.jsx           <- Title screen with BEST STREAK + Start button
+    GameScreen.jsx             <- Wraps header + tower + question during play
+    Tower.jsx                  <- The small on-screen progress tower
+    QuestionCard.jsx           <- The question + 4 big answer buttons
+    FeedbackOverlay.jsx        <- The full-screen CORRECT!/WRONG! flash
+    WinScreen.jsx               <- The YOU WIN! screen
+  App.jsx                      <- Top-level component: decides which
+                                 screen to show based on game state, and
+                                 times the auto-advance after feedback
+  App.css                      <- All styling and animations
+  index.css                    <- Minimal global reset
 ```
 
-Single characters go over serial:
-- `'C'` = correct answer, board does nothing
-- `'W'` = wrong answer, board runs the shake routine
+## For your hardware teammate
 
-The board writes back `OK` or `SHAKEN` as a line of text so you can confirm
-in the browser console that it actually received the command, useful for
-debugging without staring at the hardware.
+Open `src/hardware/hardwarePlaceholder.js`. There is exactly one function:
 
-## Wiring — READ THIS BEFORE ZACH WIRES ANYTHING
+```js
+export function triggerTowerShake() {
+  console.log("TOWER SHAKE TRIGGERED");
+  // TODO: Hardware teammate will connect this event to Arduino/USB/servo control.
+}
+```
 
-The MG996R is a standard hobby servo. It has its own motor driver built in
-and just needs a PWM signal wire straight from the board. No separate motor
-driver module is needed or used here.
+This function is called at the exact moment the player answers incorrectly.
+Right now it only logs a message to the browser's developer console (press
+F12 or right-click → Inspect → Console to see it). Your teammate can replace
+the inside of this function with whatever talks to the Arduino (Web Serial
+API, a WebSocket to a local server, a fetch() call to a backend, etc.) — the
+rest of the app doesn't need to change at all.
 
-- Servo signal wire -> a PWM-capable GPIO pin on the ESP32-S3-DevKitC-1
-  (`GPIO18` in the sketch, change `SERVO_PIN` if you wire a different one)
-- Servo V+ (red) -> an external 5-6V supply (a 4xAA pack or a bench supply,
-  **not** the board's 5V or 3V3 pin, the MG996R draws more current than the
-  board can safely supply)
-- Servo GND (black/brown) -> tie together: external supply ground AND the
-  ESP32's GND pin (common ground is required or the signal won't be readable)
+## Game rules (what's implemented)
 
-The ESP32 runs its signal pins at 3.3V instead of 5V. That's fine, the
-MG996R reads a 3.3V signal without any extra parts, no level shifter needed.
+- 10 random, unique questions are picked from a bank of ~57 AI questions
+  at the start of every round.
+- Correct answer: green flash, tower gains a block, auto-advances to the
+  next question after ~1.1 seconds.
+- Wrong answer: red flash on the button you picked, the correct answer is
+  revealed with a short explanation, the on-screen tower "falls" apart,
+  the screen shakes, and the game automatically restarts from Question 1
+  after ~1.8 seconds.
+- Answering all 10 correctly shows a YOU WIN! screen with a "BUILD AGAIN"
+  button to start a new round.
+- "Best streak" (the most correct answers in a row ever achieved) is saved
+  in your browser's `localStorage`, so it survives page refreshes. It is
+  NOT sent to any server — it only lives in that one browser.
 
-## Running it
+## What's intentionally NOT included
 
-1. **First time only**, set up the Arduino IDE for this board:
-   - Open Arduino IDE, go to File -> Preferences, and add this URL to
-     "Additional Board Manager URLs":
-     `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-   - Go to Tools -> Board -> Boards Manager, search "esp32", install the one
-     published by Espressif Systems.
-   - Go to Tools -> Board and select "ESP32S3 Dev Module".
-   - Go to Sketch -> Include Library -> Manage Libraries, search
-     "ESP32Servo", and install it. (Not the regular "Servo" library, that
-     one doesn't work on ESP32 boards.)
-2. Plug in the ESP32-S3-DevKitC-1 over USB, pick the right port under
-   Tools -> Port, and upload `esp32/shake_controller/shake_controller.ino`.
-   If the upload fails or hangs, hold the "BOOT" button on the board while
-   it starts uploading, then release once it says "Connecting...". This is
-   a normal quirk on some ESP32 boards.
-3. Serve the `web/` folder over localhost, Web Serial does not work from a
-   `file://` URL. Easiest way:
-   ```
-   cd web
-   python3 -m http.server 8000
-   ```
-   Then open `http://localhost:8000` in **Chrome or Edge** (not Safari or
-   Firefox, they don't support Web Serial).
-4. Click "Connect to Shake Plate", pick the ESP32's serial port from the
-   browser prompt, and play. If no hardware is connected, the quiz still
-   runs and simulates the shake visually, so Sakshi can build/test the UX
-   without needing the physical rig on her machine.
-5. Edit `web/questions.js` to swap in your real question bank (one subject,
-   hardcoded questions, 4 options each).
-
-## What to build next (in priority order)
-
-1. Get the raw loop working on a breadboard: press a key on a laptop ->
-   servo shakes. No UX, no quiz, just prove the serial link works.
-2. Wire the quiz app's correct/wrong logic to `link.sendCorrect()` /
-   `link.sendWrong()` (already done in `index.html`, just needs a real
-   board attached).
-3. Build the actual stack plate + 3D-printed blocks, tune `SHAKE_LOW`,
-   `SHAKE_HIGH`, `SHAKE_CYCLES` in the sketch until a wrong answer reliably
-   topples the tower but the plate is calm on a correct answer.
-4. (Stretch, for the Espressif "Best Use of Espressif Hardware & Solutions"
-   sponsor challenge) Add a cheap tilt or vibration sensor to the plate
-   that detects an actual collapse and reports it back over serial (e.g.
-   send `'F'` when it trips). That turns your project into something that
-   senses the real world, not just triggers it, read the sensor in
-   `loop()` alongside the existing serial-read logic.
-5. Polish: sound on correct/wrong, block visuals, a proper end screen.
-
-## Suggested 17-hour timeline
-
-- **Hour 0-1**: Confirm wiring approach with Zach (see above), lock the
-  quiz subject and pick/write your question bank, confirm which sponsor
-  challenges you're submitting to (Education track + the Espressif
-  challenge is the safe combo, since you're already using their exact
-  board; treat SpaceXAI as optional stretch since it requires building in
-  Cursor and calling the Grok API).
-- **Hour 1-5**: Parallel work. Sakshi builds out the quiz UX from
-  `index.html`. You get the serial link solid and the sketch tested on a
-  breadboard servo. Zach + Monica build the physical shake plate and
-  mounting.
-- **Hour 5-8**: First integration test, real wrong/correct answers driving
-  the real servo, even if the plate/tower isn't final yet.
-- **Hour 8-10**: Merge final UX with the real hardware loop. Get the full
-  correct-answer -> block-appears, wrong-answer -> shake-and-collapse loop
-  working end to end.
-- **Hour 10-12**: Physical tuning, get the shake intensity dialed in so
-  it's reliable (topples on wrong, stays put on correct, every time).
-- **Hour 12-14**: Add the sensor if you're going for the Espressif
-  challenge; add polish (sound, animations); start on SpaceXAI content
-  only if the core loop is already rock solid.
-- **Hour 14-16**: Bug fixes, record a backup demo video in case live
-  hardware misbehaves at judging, write the submission.
-- **Hour 16-17**: Submit, rehearse the pitch.
+No login, no accounts, no database, no leaderboard, no multiplayer, no
+backend, and no real Arduino/servo/USB code — per the project spec, this
+is a front-end prototype only.
