@@ -20,8 +20,8 @@
  * (Sketch -> Include Library -> Manage Libraries -> search "ESP32Servo").
  *
  * WIRING (see README for the full rationale):
- *   MG996R servo signal -> SERVO_PIN below (any PWM-capable GPIO works,
- *     GPIO18 is a safe default on the DevKitC-1)
+ *   MG996R servo signal -> SERVO_PIN below (set to GPIO4, matching how
+ *     it's actually wired on this build — change it here if you rewire)
  *   MG996R V+  -> external 5-6V supply (NOT the board's 5V/3V3 pin —
  *     the ESP32 cannot supply enough current for the MG996R)
  *   MG996R GND -> tie together: external supply ground, servo ground,
@@ -33,12 +33,12 @@
 
 #include <ESP32Servo.h>
 
-const int SERVO_PIN = 18;      // change if you wire a different GPIO
+const int SERVO_PIN = 4;       // matches the actual wiring — change if you rewire
 const int REST_ANGLE = 90;     // resting position of the shake plate
 const int SHAKE_LOW = 60;      // sweep endpoints for the shake motion
 const int SHAKE_HIGH = 120;
 const int SHAKE_CYCLES = 6;    // how many back-and-forth sweeps per shake
-const int SHAKE_STEP_DELAY = 25; // ms between degree steps (lower = faster/harder)
+const int SHAKE_STEP_DELAY = 100; // ms between degree steps (lower = faster/harder)
 
 Servo shakeServo;
 

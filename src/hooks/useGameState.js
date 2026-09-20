@@ -11,14 +11,14 @@
 //   CORRECT_FEEDBACK- brief "CORRECT!" animation after a right answer
 //   WRONG_FEEDBACK  - "WRONG!" + tower falling animation after a wrong answer
 //   GAME_OVER       - (unused as a screen; wrong answer flows straight back to START)
-//   WIN             - all 10 questions answered correctly
+//   WIN             - all 20 questions answered correctly
 // ============================================================================
 
 import { useCallback, useRef, useState } from "react";
 import { QUESTION_BANK } from "../data/questions.js";
 import { triggerTowerShake } from "../hardware/shakePlate.js";
 
-export const TOTAL_QUESTIONS = 10;
+export const TOTAL_QUESTIONS = 20;
 
 export const GAME_STATE = {
   START: "START",

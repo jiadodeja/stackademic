@@ -21,15 +21,16 @@ export default function StartScreen({ bestStreak, onStart }) {
     idle: "Connect Shake Plate",
     connecting: "Connecting...",
     connected: "Shake Plate Connected",
-    error: "Connection Failed — Try Again",
+    error: "Connection Failed, Try Again",
   }[hwStatus];
 
   return (
     <div className="screen start-screen">
-      <h1 className="game-title">BUILD YOUR TOWER</h1>
+      <h1 className="game-title">STACKADEMIC</h1>
+      <p className="brand-label">Build Your Tower</p>
       <p className="start-tagline">How high can you build?</p>
       <p className="start-instructions">
-        Answer 10 AI questions correctly to build your tower.
+        Answer 20 AI questions correctly to build your tower.
         <br />
         Get one wrong...
         <br />
@@ -52,10 +53,6 @@ export default function StartScreen({ bestStreak, onStart }) {
       >
         {connectLabel}
       </button>
-      <p className="connect-hw-hint">
-        Optional — the game works without it, but this hooks up the real
-        shake plate. Chrome or Edge only.
-      </p>
     </div>
   );
 }

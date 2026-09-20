@@ -45,6 +45,15 @@
   text-align: center;
 }
 
+.brand-label {
+  font-size: 0.9rem;
+  letter-spacing: 0.35em;
+  font-weight: 700;
+  color: #6f7fc4;
+  text-transform: uppercase;
+  margin: 0;
+}
+
 .start-tagline {
   font-size: clamp(1.1rem, 3vw, 1.5rem);
   font-weight: 700;

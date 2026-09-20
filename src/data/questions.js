@@ -446,7 +446,7 @@ export const QUESTION_BANK = [
       "The code was written in the wrong language",
     ],
     correctIndex: 0,
-    explanation: "Models learn patterns from their training data — if that data contains biases, the model can reproduce or amplify them.",
+    explanation: "Models learn patterns from their training data, so if that data contains biases, the model can reproduce or amplify them.",
   },
   {
     question: "What is 'model evaluation' used for after training?",
