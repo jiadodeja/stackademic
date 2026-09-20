@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { connectHardware, isHardwareConnected } from "../hardware/hardwarePlaceholder.js";
+import { connectHardware, isHardwareConnected } from "../hardware/shakePlate.js";
 
 export default function StartScreen({ bestStreak, onStart }) {
   const [hwStatus, setHwStatus] = useState(

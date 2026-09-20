@@ -16,7 +16,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { QUESTION_BANK } from "../data/questions.js";
-import { triggerTowerShake } from "../hardware/hardwarePlaceholder.js";
+import { triggerTowerShake } from "../hardware/shakePlate.js";
 
 export const TOTAL_QUESTIONS = 10;
 
